@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>SentriGate</title>
+    <meta name="theme-color" content="#4dabf7">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="QR Scanner">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4dabf7;
+            --primary-gradient: linear-gradient(45deg, #4dabf7, #339af0);
+            --secondary-color: #6c757d;
+            --background-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+        
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: var(--background-gradient);
+            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100%;
+        }
+        
+        .scanner-view {
+            background: white;
+            border-radius: 15px;
+            margin: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .scanner-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+        
+        .scanner-title {
+            color: #343a40;
+            font-weight: 700;
+            font-size: 1.5rem;
+            margin: 0;
+        }
+        
+        .scanner-icon {
+            font-size: 2rem;
+            color: var(--primary-color);
+            margin-right: 10px;
+        }
+        
+        #qr-reader {
+            width: 100%;
+            max-width: 300px;
+            margin: 0 auto 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            display: none;
+        }
+        
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: auto;
+        }
+        
+        .btn-scanner {
+            background: var(--primary-gradient);
+            border: none;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(77, 171, 247, 0.3);
+            width: 100%;
+        }
+        
+        .btn-scanner:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(77, 171, 247, 0.4);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: var(--secondary-color);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-weight: 500;
+            transition: all 0.3s;
+            width: 100%;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+            color: white;
+        }
+        
+        .welcome-message {
+            background-color: #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            color: #495057;
+            text-align: center;
+        }
+        
+        .welcome-icon {
+            font-size: 2rem;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+        
+        .status-message {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .status-success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status-error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .permission-prompt {
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: #856404;
+            font-size: 14px;
+            display: none;
+        }
+        
+        .url-preview {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            text-align: left;
+            word-break: break-all;
+            font-size: 14px;
+            display: none;
+        }
+        
+        .url-preview-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #495057;
+        }
+        
+        .url-preview-content {
+            color: #6c757d;
+        }
+        
+        .loader-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            transition: 0.3s;
+        }
+        
+        .loader-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+            color: var(--primary-color);
+        }
+        
+        .loader-text {
+            margin-top: 15px;
+            font-weight: 500;
+            color: #495057;
+        }
+        
+        .install-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--primary-gradient);
+            border: none;
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(77, 171, 247, 0.4);
+            z-index: 1000;
+            font-size: 24px;
+        }
+        
+        .install-button:hover {
+            transform: scale(1.05);
+            color: white;
+        }
+        
+        /* iOS PWA specific styles */
+        @supports (-webkit-touch-callout: none) {
+            body {
+                padding-top: constant(safe-area-inset-top);
+                padding-top: env(safe-area-inset-top);
+                padding-bottom: constant(safe-area-inset-bottom);
+                padding-bottom: env(safe-area-inset-bottom);
+                padding-left: constant(safe-area-inset-left);
+                padding-left: env(safe-area-inset-left);
+                padding-right: constant(safe-area-inset-right);
+                padding-right: env(safe-area-inset-right);
+            }
+        }
+    </style>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+<body>
+    <div class="app-container">
+        <div class="scanner-view">
+            <div class="scanner-header">
+                <i class="fas fa-qrcode scanner-icon"></i>
+                <h2 class="scanner-title">SentriGate</h2>
+            </div>
+            
+            <div id="welcomeMessage" class="welcome-message">
+                <div class="welcome-icon">
+                    <i class="fas fa-hand-point-up"></i>
+                </div>
+                <p>Tap the "Start Scanning" button to scan a QR code</p>
+            </div>
+            
+            <div id="permissionPrompt" class="permission-prompt">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>Camera Permission Required:</strong> Please allow camera access when prompted.
+            </div>
+            
+            <div id="qr-reader"></div>
+            
+            <div id="statusMessage" class="status-message" style="display: none;"></div>
+            
+            <div id="urlPreview" class="url-preview">
+                <div class="url-preview-title">Scanned URL:</div>
+                <div class="url-preview-content" id="scannedUrlDisplay"></div>
+                <button id="viewResultButton" class="btn btn-scanner mt-3">
+                    <i class="fas fa-eye me-2"></i> View Result
+                </button>
+            </div>
+            
+            <div class="button-container">
+                <button id="startButton" class="btn-scanner">
+                    <i class="fas fa-camera me-2"></i> Start Scanning
+                </button>
+                <button id="stopButton" class="btn-secondary" style="display: none;">
+                    <i class="fas fa-stop me-2"></i> Stop Scanning
+                </button>
+                <button id="scanAgainButton" class="btn-scanner" style="display: none;">
+                    <i class="fas fa-redo me-2"></i> Scan Again
+                </button>
+                <button onclick="logout()" class="btn-secondary">
+                    <i class="fas fa-sign-out-alt me-2"></i> Logout
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Install button -->
+    <button id="installButton" class="install-button" style="display: none;">
+        <i class="fas fa-download"></i>
+    </button>
+
+    <!-- Loader -->
+    <div class="loader-overlay" id="loader">
+        <div class="text-center">
+            <div class="spinner-border" role="status"></div>
+            <div class="loader-text">Loading...</div>
+        </div>
+    </div>
+
+    <script>
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful');
+                    })
+                    .catch(error => {
+                        console.log('ServiceWorker registration failed: ', error);
+                    });
+            });
+        }
+
+        // PWA install button
+        let deferredPrompt;
+        const installButton = document.getElementById('installButton');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installButton.style.display = 'flex';
+        });
+
+        installButton.addEventListener('click', () => {
+            installButton.style.display = 'none';
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then((choiceResult) => {
+                deferredPrompt = null;
+            });
+        });
+
+        window.addEventListener('appinstalled', () => {
+            installButton.style.display = 'none';
+            console.log('PWA was installed');
+        });
+
+        window.onload = () => {
+            if (localStorage.getItem("loggedIn") !== "true") {
+                window.location.href = "login.html";
+            }
+            
+            // Check if running as standalone PWA
+            if (window.matchMedia('(display-mode: standalone)').matches || 
+                window.navigator.standalone === true) {
+                console.log('Running as PWA');
+            }
+            
+            document.getElementById('startButton').addEventListener('click', startScanner);
+            document.getElementById('stopButton').addEventListener('click', stopScanner);
+            document.getElementById('scanAgainButton').addEventListener('click', resetScanner);
+            document.getElementById('viewResultButton').addEventListener('click', viewResult);
+        };
+
+        let html5QrcodeScanner = null;
+        let scannedUrl = '';
+
+        function startScanner() {
+            document.getElementById('welcomeMessage').style.display = 'none';
+            document.getElementById('startButton').style.display = 'none';
+            document.getElementById('stopButton').style.display = 'block';
+            document.getElementById('statusMessage').style.display = 'none';
+            document.getElementById('urlPreview').style.display = 'none';
+            document.getElementById('qr-reader').style.display = 'block';
+            
+            html5QrcodeScanner = new Html5Qrcode("qr-reader");
+            
+            html5QrcodeScanner.start(
+                { facingMode: "environment" },
+                { 
+                    fps: 10, 
+                    qrbox: 250,
+                    aspectRatio: 1.0
+                },
+                (decodedText) => {
+                    console.log(`QR Code detected: ${decodedText}`);
+                    scannedUrl = decodedText;
+                    
+                    // Validate URL
+                    if (isValidUrl(decodedText)) {
+                        // Save camera permission
+                        localStorage.setItem("cameraPermission", "granted");
+                        
+                        // Stop scanner
+                        stopScanner().then(() => {
+                            // Show URL preview
+                            showUrlPreview(decodedText);
+                        });
+                    } else {
+                        showStatusMessage("Invalid or unsafe URL detected. Please scan a valid QR code.", "error");
+                        stopScanner();
+                    }
+                },
+                (errorMessage) => {
+                    // Handle scan error silently
+                }
+            ).catch(err => {
+                console.error(`Unable to start scanning: ${err}`);
+                showStatusMessage("Unable to access camera. Please check permissions.", "error");
+                document.getElementById('startButton').style.display = 'block';
+                document.getElementById('stopButton').style.display = 'none';
+            });
+        }
+
+        function stopScanner() {
+            if (html5QrcodeScanner) {
+                return html5QrcodeScanner.stop().then(() => {
+                    html5QrcodeScanner.clear();
+                    document.getElementById('qr-reader').style.display = 'none';
+                    document.getElementById('startButton').style.display = 'block';
+                    document.getElementById('stopButton').style.display = 'none';
+                }).catch(err => {
+                    console.error(`Unable to stop scanning: ${err}`);
+                });
+            }
+            return Promise.resolve();
+        }
+
+        function resetScanner() {
+            document.getElementById('welcomeMessage').style.display = 'block';
+            document.getElementById('startButton').style.display = 'block';
+            document.getElementById('stopButton').style.display = 'none';
+            document.getElementById('scanAgainButton').style.display = 'none';
+            document.getElementById('statusMessage').style.display = 'none';
+            document.getElementById('qr-reader').style.display = 'none';
+            document.getElementById('urlPreview').style.display = 'none';
+            scannedUrl = '';
+        }
+
+        function showUrlPreview(url) {
+            document.getElementById('scannedUrlDisplay').textContent = url;
+            document.getElementById('urlPreview').style.display = 'block';
+            document.getElementById('scanAgainButton').style.display = 'block';
+            document.getElementById('startButton').style.display = 'none';
+            showStatusMessage("QR Code detected! You can view the result.", "success");
+        }
+
+        function viewResult() {
+            if (scannedUrl) {
+                // Store the scanned URL in localStorage
+                localStorage.setItem("scannedUrl", scannedUrl);
+                // Navigate to result page
+                window.location.href = "result.html";
+            }
+        }
+
+        function isValidUrl(url) {
+            try {
+                const parsedUrl = new URL(url);
+                
+                // Check if the protocol is http or https
+                if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+                    return false;
+                }
+                
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function showStatusMessage(message, type) {
+            const statusElement = document.getElementById('statusMessage');
+            statusElement.textContent = message;
+            statusElement.className = `status-message status-${type}`;
+            statusElement.style.display = 'block';
+        }
+
+        function showLoader(text = 'Loading...') {
+            document.getElementById('loaderText').textContent = text;
+            document.getElementById('loader').classList.add('active');
+        }
+
+        function hideLoader() {
+            document.getElementById('loader').classList.remove('active');
+        }
+
+        function logout() {
+            localStorage.removeItem("loggedIn");
+            localStorage.removeItem("cameraPermission");
+            localStorage.removeItem("scannedUrl");
+            window.location.href = "index.html";
+        }
+    </script>
+</body>
+</html>
