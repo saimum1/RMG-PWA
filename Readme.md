@@ -102,4 +102,3 @@ graph TD
 For issues:
 1. Check permissions in phone settings
 2. Reinstall PWA from browser
-3. Contact IT: `support@yourcompany.com`
